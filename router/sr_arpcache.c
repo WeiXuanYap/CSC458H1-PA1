@@ -23,6 +23,7 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *req) {
       while (curr_pkt) {
         // send icmp host unreachable to src addr of curr_pkt.
         // send_icmp_msg() icmp msgs go to the source IP addr.
+        send_icmp(sr, curr_pkt->buf, curr_pkt->len, dest_unreachable, host);
         curr_pkt = curr_pkt->next;
       }
       sr_arpreq_destroy(&sr->cache, req);
@@ -43,8 +44,8 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *req) {
 
       // set ethernet header info
       sr_ethernet_hdr_t *arp_frame_ehdr = (sr_ethernet_hdr_t *)arp_frame;
-      // sets destination to FF-FF-FF ...
-      memset(arp_frame_ehdr->ether_dhost, 0xFF, ETHER_ADDR_LEN);
+      // sets destination to ff-ff-ff ...
+      memset(arp_frame_ehdr->ether_dhost, 0xff, ETHER_ADDR_LEN);
       // set source to interface addr
       memcpy(arp_frame_ehdr->ether_shost, dest_if->addr, ETHER_ADDR_LEN);
       // set ether_type to arp.

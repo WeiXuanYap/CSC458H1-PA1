@@ -1,12 +1,11 @@
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
-
-#include "sr_if.h"
-#include "sr_rt.h"
-#include "sr_router.h"
-#include "sr_protocol.h"
 #include "sr_arpcache.h"
+#include "sr_if.h"
+#include "sr_protocol.h"
+#include "sr_router.h"
+#include "sr_rt.h"
 #include "sr_utils.h"
 
 /*---------------------------------------------------------------------
@@ -17,25 +16,46 @@
  *
  *---------------------------------------------------------------------*/
 
-void sr_init(struct sr_instance* sr)
-{
-    /* REQUIRES */
-    assert(sr);
+void sr_init(struct sr_instance *sr) {
+  /* REQUIRES */
+  assert(sr);
 
-    /* Initialize cache and cache cleanup thread */
-    sr_arpcache_init(&(sr->cache));
+  /* Initialize cache and cache cleanup thread */
+  sr_arpcache_init(&(sr->cache));
 
-    pthread_attr_init(&(sr->attr));
-    pthread_attr_setdetachstate(&(sr->attr), PTHREAD_CREATE_JOINABLE);
-    pthread_attr_setscope(&(sr->attr), PTHREAD_SCOPE_SYSTEM);
-    pthread_attr_setscope(&(sr->attr), PTHREAD_SCOPE_SYSTEM);
-    pthread_t thread;
+  pthread_attr_init(&(sr->attr));
+  pthread_attr_setdetachstate(&(sr->attr), PTHREAD_CREATE_JOINABLE);
+  pthread_attr_setscope(&(sr->attr), PTHREAD_SCOPE_SYSTEM);
+  pthread_attr_setscope(&(sr->attr), PTHREAD_SCOPE_SYSTEM);
+  pthread_t thread;
 
-    pthread_create(&thread, &(sr->attr), sr_arpcache_timeout, sr);
-    
-    /* Add initialization code here! */
+  pthread_create(&thread, &(sr->attr), sr_arpcache_timeout, sr);
+
+  /* Add initialization code here! */
 
 } /* -- sr_init -- */
+
+void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
+               uint8_t type, uint8_t code) {
+  // p_frame is packet's raw frame.
+  // point structs to ethernet, ip headers accordingly.
+  sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)p_frame;
+  sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t));
+
+  // need to find destination interface
+  // find longest matching prefix of src ip since icmp goes back to the sender.
+  struct sr_rt *longest_match = find_longest_match(sr, iphdr->ip_src);
+  if (!longest_match) {
+    fprintf(stderr, "routing table entry for closest ip address not found...");
+    return;
+  }
+
+  // get reference to destination interface by name.
+  struct sr_if *dest_if = sr_get_interface(sr, longest_match->interface);
+
+  // divide into all icmp message types and handle them accordingly.
+  return;
+}
 
 /*---------------------------------------------------------------------
  * Method: sr_handlepacket(uint8_t* p,char* interface)
@@ -53,19 +73,15 @@ void sr_init(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------*/
 
-void sr_handlepacket(struct sr_instance* sr,
-        uint8_t * packet/* lent */,
-        unsigned int len,
-        char* interface/* lent */)
-{
+void sr_handlepacket(struct sr_instance *sr, uint8_t *packet /* lent */,
+                     unsigned int len, char *interface /* lent */) {
   /* REQUIRES */
   assert(sr);
   assert(packet);
   assert(interface);
 
-  printf("*** -> Received packet of length %d \n",len);
+  printf("*** -> Received packet of length %d \n", len);
 
   /* fill in code here */
 
-}/* end sr_ForwardPacket */
-
+} /* end sr_ForwardPacket */
