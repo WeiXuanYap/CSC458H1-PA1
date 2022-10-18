@@ -35,6 +35,12 @@ void sr_init(struct sr_instance *sr) {
 
 } /* -- sr_init -- */
 
+
+void send_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, 
+                  struct sr_if* interface, uint32_t dest_ip) {
+  return;
+}
+
 void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
                uint8_t type, uint8_t code) {
   // p_frame is packet's raw frame.
@@ -54,6 +60,29 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
   struct sr_if *dest_if = sr_get_interface(sr, longest_match->interface);
 
   // divide into all icmp message types and handle them accordingly.
+  switch(type):
+    case echo_reply: {
+      /* set ethernet header source & destination MAC to all 0s */
+      memset(ehdr->ether_dhost, 0, ETHER_ADDR_LEN)
+      memset(ehdr->ether_shost, 0, ETHER_ADDR_LEN)
+
+      /* swap the dst and src ip addresses of ip header*/
+      uint32_t temp = iphdr->ip_dst;
+      iphdr->ip_dst = iphdr->ip_src;
+      iphdr->ip_src = temp;
+
+      /*construct ICMP Header -> type = 0, code = 0*/
+      sr_icmp_hdr_t* icmp_hdr = (sr_icmp_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+      icmp_hdr->icmp_type = type;
+      icmp_hdr->icmp_code = code;
+      
+      icmp_hdr->icmp_sum = cksum(icmp_hdr, ntohs(ip_hdr->ip_len) - (ip_hdr->ip_hl * 4));
+
+      send_packet(sr, packet, len, dest_if, longest_match->gw.s_addr);
+      break;
+    }
+
+
   return;
 }
 
