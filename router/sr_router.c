@@ -383,8 +383,6 @@ void sr_handlepacket(struct sr_instance *sr, uint8_t *packet /* lent */,
   assert(packet);
   assert(interface);
 
-  printf("*** -> Received packet of length %d \n", len);
-
   /* fill in code here */
 
   if (len < sizeof(sr_ethernet_hdr_t)) {
@@ -396,7 +394,9 @@ void sr_handlepacket(struct sr_instance *sr, uint8_t *packet /* lent */,
 
   if (eth_type == ethertype_ip) {
     ip_handler(sr, packet, len, interface);
+    printf("-> Received IP packet of length %d \n", len);
   } else if (eth_type == ethertype_arp) {
     arp_handler(sr, packet, len, interface);
+    printf("-> Received ARP packet of length %d \n", len);
   }
 } /* end sr_ForwardPacket */
