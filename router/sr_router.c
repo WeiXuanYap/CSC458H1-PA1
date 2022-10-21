@@ -86,13 +86,6 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
   sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)p_frame;
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t));
 
-  printf("IP Header:\n");
-  printf("\tVersion: %d\n \tHeader Length: %d\n \tType of Service: %d\n \tLength: %d\n \tID: %d\n \tOffset: %d\n \tTTL: %d\n \tProtocol: %d\n \tChecksum: %d\n \tSource: ", 
-          iphdr->ip_v, iphdr->ip_hl, iphdr->ip_tos, iphdr->ip_len, iphdr->ip_id, iphdr->ip_off, iphdr->ip_ttl, iphdr->ip_p, iphdr->ip_sum);
-  print_addr_ip_int(iphdr->ip_src);
-  printf("\n\tDestination: ");
-  print_addr_ip_int(iphdr->ip_dst);
-
   /* need to find destination interface
      find longest matching prefix of src ip since icmp goes back to the sender.
   */
@@ -331,6 +324,13 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     new_iphdr->ip_sum = 0;
     new_iphdr->ip_sum = cksum(new_iphdr, new_iphdr->ip_hl * 4);
 
+    printf("IP Header:\n");
+    printf("\tVersion: %d\n \tHeader Length: %d\n \tType of Service: %d\n \tLength: %d\n \tID: %d\n \tOffset: %d\n \tTTL: %d\n \tProtocol: %d\n \tChecksum: %d\n \tSource: ", 
+            new_iphdr->ip_v, new_iphdr->ip_hl, new_iphdr->ip_tos, new_iphdr->ip_len, new_iphdr->ip_id, new_iphdr->ip_off, new_iphdr->ip_ttl, new_iphdr->ip_p, new_iphdr->ip_sum);
+    print_addr_ip_int(new_iphdr->ip_src);
+    printf("\n\tDestination: ");
+    print_addr_ip_int(new_iphdr->ip_dst);
+
     struct sr_rt *rt_entry = find_longest_match(sr, new_iphdr->ip_dst);
     if (!rt_entry) {
       /* dest IP not in routing table */
@@ -404,7 +404,7 @@ void sr_handlepacket(struct sr_instance *sr, uint8_t *packet /* lent */,
     printf("<- Received IP packet of length %d ->\n", len);
     ip_handler(sr, packet, len, interface);
   } else if (eth_type == ethertype_arp) {
-    printf("<- Received ARP packet of length %d \n->", len);
+    printf("<- Received ARP packet of length %d ->\n", len);
     arp_handler(sr, packet, len, interface);
   }
 } /* end sr_ForwardPacket */
