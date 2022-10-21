@@ -87,17 +87,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t));
 
   printf("IP Header:\n");
-  printf("\tVersion: %d\n
-        \tHeader Length: %d\n
-        \tType of Service: %d\n
-        \tLength: %d\n
-        \tID: %d\n
-        \tFragment flag: %d\n
-        \tOffset: %d\n
-        \tTTL: %d\n
-        \tProtocol: %d\n
-        \tChecksum: %d\n
-        \tSource: ");
+  printf("\tVersion: %d\n \tHeader Length: %d\n \tType of Service: %d\n \tLength: %d\n \tID: %d\n \tFragment flag: %d\n \tOffset: %d\n \tTTL: %d\n \tProtocol: %d\n \tChecksum: %d\n \tSource: ");
   print_addr_ip_int(iphdr->ip_src);
   printf("\n\tDestination: ");
   print_addr_ip_int(iphdr->ip_dst);
