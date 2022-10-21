@@ -123,6 +123,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
                           sizeof(sr_ip_hdr_t));
     icmphdr->icmp_type = type;
     icmphdr->icmp_code = code;
+    icmphdr->icmp_sum = 0;
     icmphdr->icmp_sum =
         cksum(icmphdr, ntohs(iphdr->ip_len) - (iphdr->ip_hl * 4));
 
@@ -162,6 +163,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     /* if code is 3, set src IP to received packet's dest_ip */
     new_iphdr->ip_src = (code == port) ? iphdr->ip_dst : dest_if->ip;
     new_iphdr->ip_dst = iphdr->ip_src;
+    new_iphdr->ip_sum = 0;
     new_iphdr->ip_sum = cksum(new_iphdr, sizeof(sr_ip_hdr_t));
 
     /* set up new_icmphdr */
@@ -170,6 +172,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     new_icmphdr->unused = 0;
     new_icmphdr->next_mtu = 0;
     memcpy(new_icmphdr->data, iphdr, ICMP_DATA_SIZE);
+    new_icmphdr->icmp_sum = 0;
     new_icmphdr->icmp_sum = cksum(new_icmphdr, sizeof(sr_icmp_t3_hdr_t));
 
     send_packet(sr, new_frame, new_len, dest_if, longest_match->gw.s_addr);
@@ -272,7 +275,89 @@ void arp_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
 }
 
 void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
-                char *interface) {}
+                char *interface) {
+  /* store contents of the packet frame */
+  uint8_t *payload = (p_frame + sizeof(sr_ethernet_hdr_t));
+  sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)payload;
+
+  /* sanity check the ip frame */
+  uint16_t temp_checksum = iphdr->ip_sum;
+  iphdr->ip_sum = 0;
+  uint16_t true_checksum = cksum(iphdr, iphdr->ip_hl * 4);
+  if (temp_checksum != true_checksum) {
+    fprintf(stderr, "ip_handler: checksum doesn't match\n");
+    return;
+  }
+
+  if (iphdr->ip_len < 20) {
+    fprintf(stderr, "ip_handler: minimum length req not met\n");
+    return;
+  }
+
+  /* check if packet's destination is this router */
+
+  int if_exists = 0;
+  struct sr_if *if_iterator = sr->if_list;
+  while (if_iterator) {
+    if (if_iterator->ip == iphdr->ip_dst) {
+      if_exists = 1;
+    }
+    if_iterator = if_iterator->next;
+  }
+
+  if (!if_exists) {
+    /* packet's dest is not this router. */
+
+    /* construct IP hdr */
+    sr_ip_hdr_t *new_iphdr =
+        (sr_ip_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t));
+
+    /* decrease ttl */
+    new_iphdr->ip_ttl--;
+    if (new_iphdr->ip_ttl == 0) {
+      send_icmp(sr, p_frame, len, time_exceeded, (uint8_t)time_exceeded_code);
+      return;
+    }
+
+    new_iphdr->ip_sum = 0;
+    new_iphdr->ip_sum = cksum(new_iphdr, new_iphdr->ip_hl * 4);
+
+    struct sr_rt *rt_entry = find_longest_match(sr, new_iphdr->ip_dst);
+    if (!rt_entry) {
+      /* dest IP not in routing table */
+      send_icmp(sr, p_frame, len, dest_unreachable, net);
+      return;
+    }
+    struct sr_if *dest_if = sr_get_interface(sr, rt_entry->interface);
+    if (!dest_if) {
+      fprintf(stderr, "ip_handler: interface not found...\n");
+      return;
+    }
+    send_packet(sr, p_frame, len, dest_if, rt_entry->gw.s_addr);
+  } else {
+    /* packet reached its destination */
+
+    switch (iphdr->ip_p) {
+    case ip_protocol_icmp: {
+      /* packet is an imcp msg */
+      sr_icmp_hdr_t *icmphdr =
+          (sr_icmp_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t) +
+                            sizeof(sr_ip_hdr_t));
+
+      if (icmphdr->icmp_type == echo_request) {
+        send_icmp(sr, p_frame, len, echo_reply, (uint8_t)0);
+      }
+      break;
+    }
+    case ip_protocol_tcp:
+    case ip_protocol_udp: {
+      /* port is unreachable */
+      send_icmp(sr, p_frame, len, dest_unreachable, port);
+      break;
+    }
+    }
+  }
+}
 
 /*---------------------------------------------------------------------
  * Method: sr_handlepacket(uint8_t* p,char* interface)

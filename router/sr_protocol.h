@@ -101,6 +101,7 @@ typedef struct sr_icmp_t3_hdr sr_icmp_t3_hdr_t;
 enum icmp_type {
   echo_reply = 0,
   dest_unreachable = 3,
+  echo_request = 8,
   time_exceeded = 11,
 };
 
@@ -112,6 +113,7 @@ enum dest_unreachable_code {
 
 enum time_exceeded_code {
   time_exceeded_code = 0,
+  fragment_reassembly = 1,
 };
 
 /*
@@ -158,6 +160,8 @@ typedef struct sr_ethernet_hdr sr_ethernet_hdr_t;
 
 enum sr_ip_protocol {
   ip_protocol_icmp = 0x0001,
+  ip_protocol_tcp = 0x0006,
+  ip_protocol_udp = 0x0011,
 };
 
 enum sr_ethertype {
