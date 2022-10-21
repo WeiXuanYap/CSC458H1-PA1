@@ -86,6 +86,22 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
   sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)p_frame;
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t));
 
+  printf("IP Header:\n");
+  printf("\tVersion: %d\n
+        \tHeader Length: %d\n
+        \tType of Service: %d\n
+        \tLength: %d\n
+        \tID: %d\n
+        \tFragment flag: %d\n
+        \tOffset: %d\n
+        \tTTL: %d\n
+        \tProtocol: %d\n
+        \tChecksum: %d\n
+        \tSource: ");
+  print_addr_ip_int(iphdr->ip_src);
+  printf("\n\tDestination: ");
+  print_addr_ip_int(iphdr->ip_dst);
+
   /* need to find destination interface
      find longest matching prefix of src ip since icmp goes back to the sender.
   */
@@ -166,6 +182,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     new_iphdr->ip_dst = iphdr->ip_src;
     new_iphdr->ip_sum = 0;
     new_iphdr->ip_sum = cksum(new_iphdr, sizeof(sr_ip_hdr_t));
+
 
     /* set up new_icmphdr */
     new_icmphdr->icmp_type = type;
@@ -393,10 +410,10 @@ void sr_handlepacket(struct sr_instance *sr, uint8_t *packet /* lent */,
   uint16_t eth_type = ethertype(packet);
 
   if (eth_type == ethertype_ip) {
+    printf("<- Received IP packet of length %d ->\n", len);
     ip_handler(sr, packet, len, interface);
-    printf("-> Received IP packet of length %d \n", len);
   } else if (eth_type == ethertype_arp) {
+    printf("<- Received ARP packet of length %d \n->", len);
     arp_handler(sr, packet, len, interface);
-    printf("-> Received ARP packet of length %d \n", len);
   }
 } /* end sr_ForwardPacket */
