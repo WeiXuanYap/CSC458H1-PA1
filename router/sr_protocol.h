@@ -96,7 +96,8 @@ struct sr_icmp_t3_hdr {
 } __attribute__((packed));
 typedef struct sr_icmp_t3_hdr sr_icmp_t3_hdr_t;
 
-// enums for icmp message types and codes.
+/* enums for icmp message types and codes. */
+
 enum icmp_type {
   echo_reply = 0,
   dest_unreachable = 3,

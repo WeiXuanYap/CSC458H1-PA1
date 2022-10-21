@@ -12,14 +12,14 @@
 #include "sr_router.h"
 #include "sr_rt.h"
 
-// find longest prefix match
+/* find longest prefix match */
 struct sr_rt *find_longest_match(struct sr_instance *sr, uint32_t ip_addr) {
   struct sr_rt *longest = NULL;
 
-  // find longest prefix match entry by traversing the table.
+  /* find longest prefix match entry by traversing the table. */
   struct sr_rt *curr_entry = sr->routing_table;
   while (curr_entry) {
-    // compare prefixes for match
+    /* compare prefixes for match */
     if ((curr_entry->dest.s_addr & curr_entry->mask.s_addr) ==
         (ip_addr & curr_entry->mask.s_addr)) {
       if (!longest || curr_entry->mask.s_addr > longest->mask.s_addr) {

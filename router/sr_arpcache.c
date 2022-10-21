@@ -19,10 +19,11 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *req) {
       /* send icmp host unreachable to all source addr of all packets waiting on
        * this request */
       struct sr_packet *curr_pkt =
-          req->packets; // list of pacekts waiting on req.
+          req->packets; /* list of pacekts waiting on req. */
       while (curr_pkt) {
-        // send icmp host unreachable to src addr of curr_pkt.
-        // send_icmp_msg() icmp msgs go to the source IP addr.
+        /* send icmp host unreachable to src addr of curr_pkt.
+         send_icmp_msg() icmp msgs go to the source IP addr.
+         */
         send_icmp(sr, curr_pkt->buf, curr_pkt->len, dest_unreachable, host);
         curr_pkt = curr_pkt->next;
       }
@@ -31,28 +32,31 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *req) {
     } else {
       /* send ARP request */
 
-      // get destination interface
+      /* get destination interface
+       */
       struct sr_if *dest_if = sr_get_interface(sr, req->packets->iface);
       if (!dest_if) {
         fprintf(stderr, "handle_arpreq: destination interface not found...");
       }
 
-      // make arp req
+      /* make arp req
       // need uint8_t buffer for the raw ethernet frame.
+      */
       int frame_len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
       uint8_t *arp_frame = malloc(frame_len);
 
-      // set ethernet header info
+      /* set ethernet header info */
       sr_ethernet_hdr_t *arp_frame_ehdr = (sr_ethernet_hdr_t *)arp_frame;
-      // sets destination to ff-ff-ff ...
+      /* sets destination to ff-ff-ff ... */
       memset(arp_frame_ehdr->ether_dhost, 0xff, ETHER_ADDR_LEN);
-      // set source to interface addr
+      /* set source to interface addr */
       memcpy(arp_frame_ehdr->ether_shost, dest_if->addr, ETHER_ADDR_LEN);
-      // set ether_type to arp.
+      /* set ether_type to arp. */
       arp_frame_ehdr->ether_type = htons(ethertype_arp);
 
-      // create pointer to the start of arp_header in memory and then set values
-      // accordingly.
+      /* create pointer to the start of arp_header in memory and then set values
+         accordingly.
+      */
       sr_arp_hdr_t *arp_frame_ahdr =
           (sr_arp_hdr_t *)(arp_frame + sizeof(sr_ethernet_hdr_t));
 
@@ -62,19 +66,20 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *req) {
       arp_frame_ahdr->ar_pln = (unsigned char)sizeof(uint32_t);
       arp_frame_ahdr->ar_op = (unsigned short)htons(arp_op_request);
 
-      // set sender MAC to dest_if's MAC
+      /* set sender MAC to dest_if's MAC */
       memcpy(arp_frame_ahdr->ar_sha, dest_if->addr, ETHER_ADDR_LEN);
-      // set sender IP to dest_if's IP
+      /* set sender IP to dest_if's IP */
       arp_frame_ahdr->ar_sip = dest_if->ip;
-      // set target MAC to 00-00-00...
+      /* set target MAC to 00-00-00... */
       memset(arp_frame_ahdr->ar_tha, 0x00, ETHER_ADDR_LEN);
-      // set target IP to req's ip.
+      /* set target IP to req's ip. */
       arp_frame_ahdr->ar_tip = req->ip;
 
       sr_send_packet(sr, arp_frame, frame_len, dest_if->name);
       free(arp_frame);
 
-      // update sent time and times_sent
+      /* update sent time and times_sent
+       */
       req->sent = curr_t;
       req->times_sent++;
     }
