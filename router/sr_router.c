@@ -103,7 +103,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
    */
 
   switch (type) {
-  case time_exceeded:
+  
   case echo_reply: {
     /* set ehdr source MAC and dest MAC to all 0s
      */
@@ -130,6 +130,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     send_packet(sr, p_frame, len, dest_if, longest_match->gw.s_addr);
     break;
   }
+  case time_exceeded:
   case dest_unreachable: {
     unsigned int new_len = (sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) +
                             sizeof(sr_icmp_t3_hdr_t));

@@ -19,7 +19,7 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *req) {
       /* send icmp host unreachable to all source addr of all packets waiting on
        * this request */
       struct sr_packet *curr_pkt =
-          req->packets; /* list of pacekts waiting on req. */
+          req->packets; /* list of packets waiting on req. */
       while (curr_pkt) {
         /* send icmp host unreachable to src addr of curr_pkt.
          send_icmp_msg() icmp msgs go to the source IP addr.
