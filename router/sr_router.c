@@ -103,12 +103,10 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
    */
 
   switch (type) {
-  
+
   case echo_reply: {
-    /* set ehdr source MAC and dest MAC to all 0s
-     */
-    memset(ehdr->ether_shost, 0, ETHER_ADDR_LEN);
-    memset(ehdr->ether_dhost, 0, ETHER_ADDR_LEN);
+    memcpy(ehdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN);
+    memcpy(ehdr->ether_shost, dest_if->addr, ETHER_ADDR_LEN);
 
     /* swap destination ip and source ip of iphdr since the packet is being sent
       back
@@ -166,7 +164,6 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     new_iphdr->ip_dst = iphdr->ip_src;
     new_iphdr->ip_sum = 0;
     new_iphdr->ip_sum = cksum(new_iphdr, sizeof(sr_ip_hdr_t));
-
 
     /* set up new_icmphdr */
     new_icmphdr->icmp_type = type;
@@ -297,11 +294,14 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
   }
 
   printf("IP Header:\n");
-    printf("\tVersion: %d\n \tHeader Length: %d\n \tType of Service: %d\n \tLength: %d\n \tID: %d\n \tOffset: %d\n \tTTL: %d\n \tProtocol: %d\n \tChecksum: %d\n \tSource: ", 
-            iphdr->ip_v, iphdr->ip_hl, iphdr->ip_tos, iphdr->ip_len, iphdr->ip_id, iphdr->ip_off, iphdr->ip_ttl, iphdr->ip_p, iphdr->ip_sum);
-    print_addr_ip_int(iphdr->ip_src);
-    printf("\n\tDestination: ");
-    print_addr_ip_int(iphdr->ip_dst);
+  printf("\tVersion: %d\n \tHeader Length: %d\n \tType of Service: %d\n "
+         "\tLength: %d\n \tID: %d\n \tOffset: %d\n \tTTL: %d\n \tProtocol: "
+         "%d\n \tChecksum: %d\n \tSource: ",
+         iphdr->ip_v, iphdr->ip_hl, iphdr->ip_tos, iphdr->ip_len, iphdr->ip_id,
+         iphdr->ip_off, iphdr->ip_ttl, iphdr->ip_p, iphdr->ip_sum);
+  print_addr_ip_int(iphdr->ip_src);
+  printf("\n\tDestination: ");
+  print_addr_ip_int(iphdr->ip_dst);
 
   /* check if packet's destination is this router */
 
@@ -349,9 +349,27 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     switch (iphdr->ip_p) {
     case ip_protocol_icmp: {
       /* packet is an imcp msg */
+
+      /* check the icmp frame */
+      if (len < sizeof(sr_ethernet_hdr_t) + sizeof(sr_icmp_hdr_t) +
+                    iphdr->ip_hl * 4) {
+        fprintf(stderr,
+                "ip_handler: icmp header length requirement not satisfied.\n");
+        return;
+      }
+
       sr_icmp_hdr_t *icmphdr =
           (sr_icmp_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t) +
                             sizeof(sr_ip_hdr_t));
+      /* check cksum */
+      uint16_t temp_checksum = icmphdr->icmp_sum;
+      icmphdr->icmp_sum = 0;
+      uint16_t true_checksum =
+          cksum(icmphdr, ntohs(iphdr->ip_len) - (iphdr->ip_hl * 4));
+      if (temp_checksum != true_checksum) {
+        fprintf(stderr, "ip_handler: icmp checksum does not match\n");
+        return;
+      }
 
       if (icmphdr->icmp_type == echo_request) {
         send_icmp(sr, p_frame, len, echo_reply, (uint8_t)0);
