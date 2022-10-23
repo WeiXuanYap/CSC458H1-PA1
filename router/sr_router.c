@@ -281,6 +281,11 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)payload;
 
   /* sanity check the ip frame */
+  /* check ip version */
+  if (iphdr->ip_v != 4) {
+    fprintf(stderr, "ip_handler: IP version is not 4\n");
+    return;
+  }
   uint16_t temp_checksum = iphdr->ip_sum;
   iphdr->ip_sum = 0;
   uint16_t true_checksum = cksum(iphdr, iphdr->ip_hl * 4);
@@ -289,7 +294,7 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     return;
   }
 
-  if (iphdr->ip_len < 20) {
+  if (iphdr->ip_len < 20 || iphdr->ip_len > IP_MAXPACKET) {
     fprintf(stderr, "ip_handler: minimum length req not met\n");
     return;
   }
