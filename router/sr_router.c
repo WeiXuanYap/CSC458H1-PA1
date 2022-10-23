@@ -105,6 +105,7 @@ void send_icmp(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
   switch (type) {
 
   case echo_reply: {
+
     memcpy(ehdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN);
     memcpy(ehdr->ether_shost, dest_if->addr, ETHER_ADDR_LEN);
 
@@ -324,7 +325,8 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     /* decrease ttl */
     new_iphdr->ip_ttl--;
     if (new_iphdr->ip_ttl == 0) {
-      send_icmp(sr, p_frame, len, time_exceeded, (uint8_t)time_exceeded_code);
+      send_icmp(sr, p_frame, len, (uint8_t)time_exceeded,
+                (uint8_t)time_exceeded_code);
       return;
     }
 
@@ -334,7 +336,7 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
     struct sr_rt *rt_entry = find_longest_match(sr, new_iphdr->ip_dst);
     if (!rt_entry) {
       /* dest IP not in routing table */
-      send_icmp(sr, p_frame, len, dest_unreachable, net);
+      send_icmp(sr, p_frame, len, (uint8_t)dest_unreachable, (uint8_t)net);
       return;
     }
     struct sr_if *dest_if = sr_get_interface(sr, rt_entry->interface);
@@ -358,6 +360,7 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
         return;
       }
 
+      /* packet is an icmp msg */
       sr_icmp_hdr_t *icmphdr =
           (sr_icmp_hdr_t *)(p_frame + sizeof(sr_ethernet_hdr_t) +
                             sizeof(sr_ip_hdr_t));
@@ -372,14 +375,14 @@ void ip_handler(struct sr_instance *sr, uint8_t *p_frame, unsigned int len,
       }
 
       if (icmphdr->icmp_type == echo_request) {
-        send_icmp(sr, p_frame, len, echo_reply, (uint8_t)0);
+        send_icmp(sr, p_frame, len, (uint8_t)echo_reply, (uint8_t)0);
       }
       break;
     }
     case ip_protocol_tcp:
     case ip_protocol_udp: {
       /* port is unreachable */
-      send_icmp(sr, p_frame, len, dest_unreachable, port);
+      send_icmp(sr, p_frame, len, (uint8_t)dest_unreachable, (uint8_t)port);
       break;
     }
     }
